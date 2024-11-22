@@ -1,5 +1,6 @@
 // HTMLCanvasElement.toBlob() polyfill
 // copy-pasted off https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob
+import { DomEvent } from 'leaflet';
 import PouchDB from 'pouchdb';
 
 if (!HTMLCanvasElement.prototype.toBlob) {
@@ -57,10 +58,12 @@ L.TileLayer.include({
 	createTile: function(coords, done) {
 		var tile = document.createElement("img");
 
-		tile.onerror = L.bind(this._tileOnError, this, done, tile);
+		// Updating based on current leaflet code
+		// tile.onerror = L.bind(this._tileOnError, this, done, tile);
+		DomEvent.on(tile, 'error', this._tileOnError.bind(this, done, tile));
 
-		if (this.options.crossOrigin) {
-			tile.crossOrigin = "";
+		if (this.options.crossOrigin || this.options.crossOrigin === '') {
+			tile.crossOrigin = this.options.crossOrigin === true ?'' : this.options.crossOrigin;
 		}
 
 		/*
@@ -69,9 +72,13 @@ L.TileLayer.include({
 		 */
 		tile.alt = "";
 
+		// Leaflet has added referrerPolicy option. Not implementing for now unless needed.
+
+		// Leaflet original uses tile.src structure instead of separate tileUrl variable
 		var tileUrl = this.getTileUrl(coords);
 		var cacheName = this._maskURL(tileUrl);
 
+		// cacheName is _id property for pouchdb doc.
 		if (this.options.useCache) {
 			this._db.get(
 				cacheName,
@@ -80,7 +87,7 @@ L.TileLayer.include({
 			);
 		} else {
 			// Fall back to standard behaviour
-			tile.onload = L.bind(this._tileOnLoad, this, done, tile);
+			DomEvent.on(tile, 'load', this._tileOnLoad.bind(this, done, tile));
 			tile.src = tileUrl;
 		}
 
@@ -126,26 +133,29 @@ L.TileLayer.include({
 					console.log("Tile is too old: ", tileUrl);
 
 					if (this.options.saveToCache) {
-						tile.onload = L.bind(
+						DomEvent.on(tile, 'load', this._tileOnLoad.bind(
 							this._saveTile,
 							this,
 							tile,
 							tileUrl,
 							data._revs_info[0].rev,
 							done
-						);
+						), tile);
 					}
 					tile.crossOrigin = "Anonymous";
 					tile.src = tileUrl;
-					tile.onerror = function(ev) {
-						// If the tile is too old but couldn't be fetched from the network,
-						//   serve the one still in cache.
-						this.src = url;
-					};
+
+					DomEvent.on(tile, 'error', function(ev) {this.src = url}, tile)
+					// tile.onerror = function(ev) {
+					// 	// If the tile is too old but couldn't be fetched from the network,
+					// 	//   serve the one still in cache.
+					// 	this.src = url;
+					// };
 				} else {
 					// Serve tile from cached data
 					//console.log('Tile is cached: ', tileUrl);
-					tile.onload = L.bind(this._tileOnLoad, this, done, tile);
+					//tile.onload = L.bind(this._tileOnLoad, this, done, tile);
+					DomEvent.on(tile, 'load', this._tileOnLoad.bind(this, done, tile))
 					tile.src = url;
 				}
 			}.bind(this)
@@ -160,22 +170,24 @@ L.TileLayer.include({
 		if (this.options.useOnlyCache) {
 			// Offline, not cached
 			// 	console.log('Tile not in cache', tileUrl);
-			tile.onload = L.Util.falseFn;
+			// tile.onload = L.Util.falseFn;
+			DomEvent.on(tile, 'load', L.Util.falseFn, tile)
 			tile.src = L.Util.emptyImageUrl;
 		} else {
 			// Online, not cached, request the tile normally
 			// console.log('Requesting tile normally', tileUrl);
 			if (this.options.saveToCache) {
-				tile.onload = L.bind(
+				DomEvent.on(tile, 'load', this._tileOnLoad.bind(
 					this._saveTile,
 					this,
 					tile,
 					tileUrl,
 					undefined,
 					done
-				);
+				), tile);
 			} else {
-				tile.onload = L.bind(this._tileOnLoad, this, done, tile);
+				// tile.onload = L.bind(this._tileOnLoad, this, done, tile);
+				DomEvent.on(tile, 'load', this._tileOnLoad.bind(this, done, tile))
 			}
 			tile.crossOrigin = "Anonymous";
 			tile.src = tileUrl;
@@ -224,7 +236,7 @@ L.TileLayer.include({
 						}
 					})
 					.catch(function() {
-						// Saving the tile to the cache might have failed, 
+						// Saving the tile to the cache might have failed,
 						// but the tile itself has been loaded.
 						if (done) {
 							done();
@@ -337,10 +349,15 @@ L.TileLayer.include({
 			function(err, data) {
 				if (!data) {
 					/// FIXME: Do something on tile error!!
-					tile.onload = function(ev) {
-						this._saveTile(tile, url, null); //(ev)
+					// tile.onload = function(ev) {
+					// 	this._saveTile(tile, url, null); //(ev)
+					// 	this._seedOneTile(tile, remaining, seedData);
+					// }.bind(this);
+					DomEvent.on(tile, 'load', function(ev) {
+						this._saveTile(tile, url, null);
 						this._seedOneTile(tile, remaining, seedData);
-					}.bind(this);
+					}, tile);
+
 					tile.crossOrigin = "Anonymous";
 					tile.src = url;
 				} else {
