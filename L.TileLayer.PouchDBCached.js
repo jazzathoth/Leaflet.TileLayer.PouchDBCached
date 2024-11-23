@@ -1,7 +1,7 @@
 // HTMLCanvasElement.toBlob() polyfill
 // copy-pasted off https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob
-import { DomEvent } from 'leaflet';
-import PouchDB from 'pouchdb';
+// import { DomEvent } from 'leaflet';
+// import PouchDB from 'pouchdb';
 
 if (!HTMLCanvasElement.prototype.toBlob) {
 	Object.defineProperty(HTMLCanvasElement.prototype, "toBlob", {
@@ -60,7 +60,7 @@ L.TileLayer.include({
 
 		// Updating based on current leaflet code
 		// tile.onerror = L.bind(this._tileOnError, this, done, tile);
-		DomEvent.on(tile, 'error', this._tileOnError.bind(this, done, tile));
+		L.DomEvent.on(tile, 'error', L.Util.bind(this._tileOnError, this, done, tile));
 
 		if (this.options.crossOrigin || this.options.crossOrigin === '') {
 			tile.crossOrigin = this.options.crossOrigin === true ?'' : this.options.crossOrigin;
@@ -87,7 +87,7 @@ L.TileLayer.include({
 			);
 		} else {
 			// Fall back to standard behaviour
-			DomEvent.on(tile, 'load', this._tileOnLoad.bind(this, done, tile));
+			L.DomEvent.on(tile, 'load', L.Util.bind(this._tileOnLoad, this, done, tile));
 			tile.src = tileUrl;
 		}
 
@@ -133,19 +133,19 @@ L.TileLayer.include({
 					console.log("Tile is too old: ", tileUrl);
 
 					if (this.options.saveToCache) {
-						DomEvent.on(tile, 'load', this._tileOnLoad.bind(
+						L.DomEvent.on(tile, 'load', L.Util.bind(
 							this._saveTile,
 							this,
 							tile,
 							tileUrl,
 							data._revs_info[0].rev,
 							done
-						), tile);
+						));
 					}
 					tile.crossOrigin = "Anonymous";
 					tile.src = tileUrl;
 
-					DomEvent.on(tile, 'error', function(ev) {this.src = url}, tile)
+					L.DomEvent.on(tile, 'error', function(ev) {this.src = url}, tile)
 					// tile.onerror = function(ev) {
 					// 	// If the tile is too old but couldn't be fetched from the network,
 					// 	//   serve the one still in cache.
@@ -155,7 +155,7 @@ L.TileLayer.include({
 					// Serve tile from cached data
 					//console.log('Tile is cached: ', tileUrl);
 					//tile.onload = L.bind(this._tileOnLoad, this, done, tile);
-					DomEvent.on(tile, 'load', this._tileOnLoad.bind(this, done, tile))
+					L.DomEvent.on(tile, 'load', L.Util.bind(this._tileOnLoad, this, done, tile));
 					tile.src = url;
 				}
 			}.bind(this)
@@ -171,23 +171,23 @@ L.TileLayer.include({
 			// Offline, not cached
 			// 	console.log('Tile not in cache', tileUrl);
 			// tile.onload = L.Util.falseFn;
-			DomEvent.on(tile, 'load', L.Util.falseFn, tile)
+			L.DomEvent.on(tile, 'load', L.Util.falseFn)
 			tile.src = L.Util.emptyImageUrl;
 		} else {
 			// Online, not cached, request the tile normally
 			// console.log('Requesting tile normally', tileUrl);
 			if (this.options.saveToCache) {
-				DomEvent.on(tile, 'load', this._tileOnLoad.bind(
+				L.DomEvent.on(tile, 'load', L.Util.bind(
 					this._saveTile,
 					this,
 					tile,
 					tileUrl,
 					undefined,
 					done
-				), tile);
+				));
 			} else {
 				// tile.onload = L.bind(this._tileOnLoad, this, done, tile);
-				DomEvent.on(tile, 'load', this._tileOnLoad.bind(this, done, tile))
+				L.DomEvent.on(tile, 'load', L.Util.bind(this._tileOnLoad, this, done, tile));
 			}
 			tile.crossOrigin = "Anonymous";
 			tile.src = tileUrl;
@@ -353,7 +353,7 @@ L.TileLayer.include({
 					// 	this._saveTile(tile, url, null); //(ev)
 					// 	this._seedOneTile(tile, remaining, seedData);
 					// }.bind(this);
-					DomEvent.on(tile, 'load', function(ev) {
+					L.DomEvent.on(tile, 'load', function(ev) {
 						this._saveTile(tile, url, null);
 						this._seedOneTile(tile, remaining, seedData);
 					}, tile);

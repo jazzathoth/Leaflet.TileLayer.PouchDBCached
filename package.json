@@ -22,8 +22,9 @@
   },
   "homepage": "https://github.com/MazeMap/Leaflet.TileLayer.PouchDBCached#readme",
   "devDependencies": {
-    "leaflet": "^1.0.0",
-    "pouchdb": "^7.0.0"
+    "browserify": "^17.0.1",
+    "leaflet": "^1.9.4",
+    "pouchdb": "^7.3.1"
   },
   "prettier": {
     "printWidth": 85,
@@ -31,6 +32,5 @@
     "useTabs": true,
     "trailingComma": "es5",
     "arrowParens": "always"
-  },
-  "dependencies": {}
+  }
 }
